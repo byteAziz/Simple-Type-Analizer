@@ -49,8 +49,8 @@ class hmVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by hmParser#VARIABLE.
-    def visitVARIABLE(self, ctx:hmParser.VARIABLEContext):
+    # Visit a parse tree produced by hmParser#Variable.
+    def visitVariable(self, ctx:hmParser.VariableContext):
         return self.visitChildren(ctx)
 
 

@@ -386,6 +386,22 @@ class hmParser ( Parser ):
 
 
 
+    class VariableContext(FactContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a hmParser.FactContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def VARIABLE(self):
+            return self.getToken(hmParser.VARIABLE, 0)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitVariable" ):
+                return visitor.visitVariable(self)
+            else:
+                return visitor.visitChildren(self)
+
+
     class NumberContext(FactContext):
 
         def __init__(self, parser, ctx:ParserRuleContext): # actually a hmParser.FactContext
@@ -398,22 +414,6 @@ class hmParser ( Parser ):
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNumber" ):
                 return visitor.visitNumber(self)
-            else:
-                return visitor.visitChildren(self)
-
-
-    class VARIABLEContext(FactContext):
-
-        def __init__(self, parser, ctx:ParserRuleContext): # actually a hmParser.FactContext
-            super().__init__(parser)
-            self.copyFrom(ctx)
-
-        def VARIABLE(self):
-            return self.getToken(hmParser.VARIABLE, 0)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitVARIABLE" ):
-                return visitor.visitVARIABLE(self)
             else:
                 return visitor.visitChildren(self)
 
@@ -434,7 +434,7 @@ class hmParser ( Parser ):
                 self.match(hmParser.NUMBER)
                 pass
             elif token in [6]:
-                localctx = hmParser.VARIABLEContext(self, localctx)
+                localctx = hmParser.VariableContext(self, localctx)
                 self.enterOuterAlt(localctx, 2)
                 self.state = 38
                 self.match(hmParser.VARIABLE)

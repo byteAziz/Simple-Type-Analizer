@@ -3,8 +3,8 @@ grammar hm;
 NUMBER : [0-9]+ ;
 VARIABLE : [a-zA-Z] [a-zA-Z0-9]*;
 
-OPERATORHP : '*' | '/';       // High Prio
-OPERATORLP : '+' | '-';       // Low Prio
+OPERATORHP : '*' | '/';
+OPERATORLP : '+' | '-';
 
 root : expr;
 
@@ -19,7 +19,7 @@ term : '\\' VARIABLE '->' expr     # Abstraction
      ;
 
 fact : NUMBER                      # Number
-     | VARIABLE                    # VARIABLE
+     | VARIABLE                    # Variable
      ;
 
 WS   : [ \t\n\r]+ -> skip;
