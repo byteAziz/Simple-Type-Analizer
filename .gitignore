@@ -1,2 +1,6 @@
 __pycache__
 .antlr
+*
+!.gitignore
+!hm.py
+!hm.g4

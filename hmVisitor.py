@@ -19,28 +19,23 @@ class hmVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by hmParser#Application.
-    def visitApplication(self, ctx:hmParser.ApplicationContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by hmParser#Abstraction.
     def visitAbstraction(self, ctx:hmParser.AbstractionContext):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by hmParser#HighPrioOperator.
-    def visitHighPrioOperator(self, ctx:hmParser.HighPrioOperatorContext):
+    # Visit a parse tree produced by hmParser#Application.
+    def visitApplication(self, ctx:hmParser.ApplicationContext):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by hmParser#LowPrioOperator.
-    def visitLowPrioOperator(self, ctx:hmParser.LowPrioOperatorContext):
+    # Visit a parse tree produced by hmParser#ApplicationParen.
+    def visitApplicationParen(self, ctx:hmParser.ApplicationParenContext):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by hmParser#Factor.
-    def visitFactor(self, ctx:hmParser.FactorContext):
+    # Visit a parse tree produced by hmParser#Operator.
+    def visitOperator(self, ctx:hmParser.OperatorContext):
         return self.visitChildren(ctx)
 
 
