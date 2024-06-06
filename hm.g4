@@ -7,12 +7,21 @@ OPERATOR : '+';
 
 root : expr;
 
-expr : '\\' VARIABLE '->' expr     # Abstraction    
-     | expr expr                   # Application
-     | '(' expr ')' expr           # ApplicParen
-     | '(' OPERATOR ')'            # OperatorNP 
-     | NUMBER                      # Number
-     | VARIABLE                    # Variable
+expr : abstraction
+     | application
+     | term
+     ;
+
+abstraction : '\\' VARIABLE '->' expr;
+
+application : application term    # ApplicRecursive
+            | term term           # ApplicationBase
+            ;
+
+term : '(' expr ')'               # ParenExpr
+     | '(' OPERATOR ')'           # OperatorNP
+     | NUMBER                     # Number
+     | VARIABLE                   # Variable
      ;
 
 WS   : [ \t\n\r]+ -> skip;

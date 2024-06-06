@@ -69,15 +69,18 @@ class TreeVisitor(hmVisitor):
         leftNode = Node(self.next_id(), variable, Void(), Void())
         return Node(self.next_id(), 'λ', leftNode, body)
 
-    def visitApplication(self, ctx:hmParser.ApplicationContext):
-        left = self.visit(ctx.expr(0))
-        right = self.visit(ctx.expr(1))
+    def visitApplicRecursive(self, ctx:hmParser.ApplicRecursiveContext):
+        left = self.visit(ctx.application())
+        right = self.visit(ctx.term())
         return Node(self.next_id(), '@', left, right)
 
-    def visitApplicParen(self, ctx:hmParser.ApplicParenContext):
-        left = self.visit(ctx.expr())
-        right = self.visit(ctx.expr(1))
+    def visitApplicationBase(self, ctx:hmParser.ApplicationBaseContext):
+        left = self.visit(ctx.term(0))
+        right = self.visit(ctx.term(1))
         return Node(self.next_id(), '@', left, right)
+
+    def visitParenExpr(self, ctx:hmParser.ParenExprContext):
+        return self.visit(ctx.expr())
 
     def visitOperatorNP(self, ctx:hmParser.OperatorNPContext):
         operator = ctx.OPERATOR().getText()
@@ -110,6 +113,7 @@ st.write("""
          (+) 2  
          \\x -> (+) 2 x  
          (\\x -> (+) 2 x) 4  
+         (\\x -> (+) 2 x) ((\\y -> (+) 3 y) 6) 
          """)
 
 stInput = st.text_input("Expressió", 
