@@ -1,5 +1,16 @@
 # L'analitzador de tipus HinNer
 
+Compilar amb
+```shell
+antlr4 -Dlanguage=Python3 -no-listener -visitor hm.g4
+```
+I executar amb
+``` shell
+streamlit run hm.py
+```
+
+***
+
 Aquesta pàgina descriu la pràctica de GEI-LP (edició 2023-2024 Q2). La vostra feina consisteix en implementar un petit analitzador de tipus anomenat *HinNer*.
 
 En aquesta pràctica utilitzarem un llenguatge tipus Haskell per codificar expressions i tipus. Com:
