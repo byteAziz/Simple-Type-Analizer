@@ -14,8 +14,23 @@ class hmVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by hmParser#Termino.
-    def visitTermino(self, ctx:hmParser.TerminoContext):
+    # Visit a parse tree produced by hmParser#ApplicParen.
+    def visitApplicParen(self, ctx:hmParser.ApplicParenContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by hmParser#OperatorNP.
+    def visitOperatorNP(self, ctx:hmParser.OperatorNPContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by hmParser#Variable.
+    def visitVariable(self, ctx:hmParser.VariableContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by hmParser#Number.
+    def visitNumber(self, ctx:hmParser.NumberContext):
         return self.visitChildren(ctx)
 
 
@@ -26,26 +41,6 @@ class hmVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by hmParser#Application.
     def visitApplication(self, ctx:hmParser.ApplicationContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by hmParser#ApplicationParen.
-    def visitApplicationParen(self, ctx:hmParser.ApplicationParenContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by hmParser#Operator.
-    def visitOperator(self, ctx:hmParser.OperatorContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by hmParser#Number.
-    def visitNumber(self, ctx:hmParser.NumberContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by hmParser#Variable.
-    def visitVariable(self, ctx:hmParser.VariableContext):
         return self.visitChildren(ctx)
 
 

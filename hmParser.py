@@ -10,18 +10,16 @@ else:
 
 def serializedATN():
     return [
-        4,1,8,37,2,0,7,0,2,1,7,1,2,2,7,2,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,
-        1,1,1,1,1,1,1,1,1,1,1,1,3,1,21,8,1,1,1,1,1,5,1,25,8,1,10,1,12,1,
-        28,9,1,1,2,1,2,1,2,1,2,1,2,3,2,35,8,2,1,2,0,1,2,3,0,2,4,0,0,38,0,
-        6,1,0,0,0,2,20,1,0,0,0,4,34,1,0,0,0,6,7,3,2,1,0,7,1,1,0,0,0,8,9,
-        6,1,-1,0,9,10,5,1,0,0,10,11,5,6,0,0,11,12,5,2,0,0,12,21,3,2,1,4,
-        13,14,5,3,0,0,14,15,3,2,1,0,15,16,5,4,0,0,16,17,1,0,0,0,17,18,3,
-        4,2,0,18,21,1,0,0,0,19,21,3,4,2,0,20,8,1,0,0,0,20,13,1,0,0,0,20,
-        19,1,0,0,0,21,26,1,0,0,0,22,23,10,2,0,0,23,25,3,4,2,0,24,22,1,0,
-        0,0,25,28,1,0,0,0,26,24,1,0,0,0,26,27,1,0,0,0,27,3,1,0,0,0,28,26,
-        1,0,0,0,29,30,5,3,0,0,30,31,5,7,0,0,31,35,5,4,0,0,32,35,5,5,0,0,
-        33,35,5,6,0,0,34,29,1,0,0,0,34,32,1,0,0,0,34,33,1,0,0,0,35,5,1,0,
-        0,0,3,20,26,34
+        4,1,8,31,2,0,7,0,2,1,7,1,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,22,8,1,1,1,1,1,5,1,26,8,1,10,1,12,
+        1,29,9,1,1,1,0,1,2,2,0,2,0,0,33,0,4,1,0,0,0,2,21,1,0,0,0,4,5,3,2,
+        1,0,5,1,1,0,0,0,6,7,6,1,-1,0,7,8,5,1,0,0,8,9,5,6,0,0,9,10,5,2,0,
+        0,10,22,3,2,1,6,11,12,5,3,0,0,12,13,3,2,1,0,13,14,5,4,0,0,14,15,
+        3,2,1,4,15,22,1,0,0,0,16,17,5,3,0,0,17,18,5,7,0,0,18,22,5,4,0,0,
+        19,22,5,5,0,0,20,22,5,6,0,0,21,6,1,0,0,0,21,11,1,0,0,0,21,16,1,0,
+        0,0,21,19,1,0,0,0,21,20,1,0,0,0,22,27,1,0,0,0,23,24,10,5,0,0,24,
+        26,3,2,1,6,25,23,1,0,0,0,26,29,1,0,0,0,27,25,1,0,0,0,27,28,1,0,0,
+        0,28,3,1,0,0,0,29,27,1,0,0,0,2,21,27
     ]
 
 class hmParser ( Parser ):
@@ -34,16 +32,16 @@ class hmParser ( Parser ):
 
     sharedContextCache = PredictionContextCache()
 
-    literalNames = [ "<INVALID>", "'\\'", "'->'", "'('", "')'" ]
+    literalNames = [ "<INVALID>", "'\\'", "'->'", "'('", "')'", "<INVALID>", 
+                     "<INVALID>", "'+'" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "NUMBER", "VARIABLE", "OPERATOR", "WS" ]
 
     RULE_root = 0
     RULE_expr = 1
-    RULE_atom = 2
 
-    ruleNames =  [ "root", "expr", "atom" ]
+    ruleNames =  [ "root", "expr" ]
 
     EOF = Token.EOF
     T__0=1
@@ -93,7 +91,7 @@ class hmParser ( Parser ):
         self.enterRule(localctx, 0, self.RULE_root)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 6
+            self.state = 4
             self.expr(0)
         except RecognitionException as re:
             localctx.exception = re
@@ -120,19 +118,70 @@ class hmParser ( Parser ):
             super().copyFrom(ctx)
 
 
-    class TerminoContext(ExprContext):
+    class ApplicParenContext(ExprContext):
 
         def __init__(self, parser, ctx:ParserRuleContext): # actually a hmParser.ExprContext
             super().__init__(parser)
             self.copyFrom(ctx)
 
-        def atom(self):
-            return self.getTypedRuleContext(hmParser.AtomContext,0)
+        def expr(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(hmParser.ExprContext)
+            else:
+                return self.getTypedRuleContext(hmParser.ExprContext,i)
 
 
         def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitTermino" ):
-                return visitor.visitTermino(self)
+            if hasattr( visitor, "visitApplicParen" ):
+                return visitor.visitApplicParen(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+    class OperatorNPContext(ExprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a hmParser.ExprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def OPERATOR(self):
+            return self.getToken(hmParser.OPERATOR, 0)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitOperatorNP" ):
+                return visitor.visitOperatorNP(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+    class VariableContext(ExprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a hmParser.ExprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def VARIABLE(self):
+            return self.getToken(hmParser.VARIABLE, 0)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitVariable" ):
+                return visitor.visitVariable(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+    class NumberContext(ExprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a hmParser.ExprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def NUMBER(self):
+            return self.getToken(hmParser.NUMBER, 0)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitNumber" ):
+                return visitor.visitNumber(self)
             else:
                 return visitor.visitChildren(self)
 
@@ -162,36 +211,16 @@ class hmParser ( Parser ):
             super().__init__(parser)
             self.copyFrom(ctx)
 
-        def expr(self):
-            return self.getTypedRuleContext(hmParser.ExprContext,0)
-
-        def atom(self):
-            return self.getTypedRuleContext(hmParser.AtomContext,0)
+        def expr(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(hmParser.ExprContext)
+            else:
+                return self.getTypedRuleContext(hmParser.ExprContext,i)
 
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitApplication" ):
                 return visitor.visitApplication(self)
-            else:
-                return visitor.visitChildren(self)
-
-
-    class ApplicationParenContext(ExprContext):
-
-        def __init__(self, parser, ctx:ParserRuleContext): # actually a hmParser.ExprContext
-            super().__init__(parser)
-            self.copyFrom(ctx)
-
-        def atom(self):
-            return self.getTypedRuleContext(hmParser.AtomContext,0)
-
-        def expr(self):
-            return self.getTypedRuleContext(hmParser.ExprContext,0)
-
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitApplicationParen" ):
-                return visitor.visitApplicationParen(self)
             else:
                 return visitor.visitChildren(self)
 
@@ -206,7 +235,7 @@ class hmParser ( Parser ):
         self.enterRecursionRule(localctx, 2, self.RULE_expr, _p)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 20
+            self.state = 21
             self._errHandler.sync(self)
             la_ = self._interp.adaptivePredict(self._input,0,self._ctx)
             if la_ == 1:
@@ -214,42 +243,61 @@ class hmParser ( Parser ):
                 self._ctx = localctx
                 _prevctx = localctx
 
-                self.state = 9
+                self.state = 7
                 self.match(hmParser.T__0)
-                self.state = 10
+                self.state = 8
                 self.match(hmParser.VARIABLE)
-                self.state = 11
+                self.state = 9
                 self.match(hmParser.T__1)
-                self.state = 12
-                self.expr(4)
+                self.state = 10
+                self.expr(6)
                 pass
 
             elif la_ == 2:
-                localctx = hmParser.ApplicationParenContext(self, localctx)
+                localctx = hmParser.ApplicParenContext(self, localctx)
                 self._ctx = localctx
                 _prevctx = localctx
-
-                self.state = 13
+                self.state = 11
                 self.match(hmParser.T__2)
-                self.state = 14
+                self.state = 12
                 self.expr(0)
-                self.state = 15
+                self.state = 13
                 self.match(hmParser.T__3)
-                self.state = 17
-                self.atom()
+                self.state = 14
+                self.expr(4)
                 pass
 
             elif la_ == 3:
-                localctx = hmParser.TerminoContext(self, localctx)
+                localctx = hmParser.OperatorNPContext(self, localctx)
+                self._ctx = localctx
+                _prevctx = localctx
+                self.state = 16
+                self.match(hmParser.T__2)
+                self.state = 17
+                self.match(hmParser.OPERATOR)
+                self.state = 18
+                self.match(hmParser.T__3)
+                pass
+
+            elif la_ == 4:
+                localctx = hmParser.NumberContext(self, localctx)
                 self._ctx = localctx
                 _prevctx = localctx
                 self.state = 19
-                self.atom()
+                self.match(hmParser.NUMBER)
+                pass
+
+            elif la_ == 5:
+                localctx = hmParser.VariableContext(self, localctx)
+                self._ctx = localctx
+                _prevctx = localctx
+                self.state = 20
+                self.match(hmParser.VARIABLE)
                 pass
 
 
             self._ctx.stop = self._input.LT(-1)
-            self.state = 26
+            self.state = 27
             self._errHandler.sync(self)
             _alt = self._interp.adaptivePredict(self._input,1,self._ctx)
             while _alt!=2 and _alt!=ATN.INVALID_ALT_NUMBER:
@@ -259,13 +307,13 @@ class hmParser ( Parser ):
                     _prevctx = localctx
                     localctx = hmParser.ApplicationContext(self, hmParser.ExprContext(self, _parentctx, _parentState))
                     self.pushNewRecursionContext(localctx, _startState, self.RULE_expr)
-                    self.state = 22
-                    if not self.precpred(self._ctx, 2):
-                        from antlr4.error.Errors import FailedPredicateException
-                        raise FailedPredicateException(self, "self.precpred(self._ctx, 2)")
                     self.state = 23
-                    self.atom() 
-                self.state = 28
+                    if not self.precpred(self._ctx, 5):
+                        from antlr4.error.Errors import FailedPredicateException
+                        raise FailedPredicateException(self, "self.precpred(self._ctx, 5)")
+                    self.state = 24
+                    self.expr(6) 
+                self.state = 29
                 self._errHandler.sync(self)
                 _alt = self._interp.adaptivePredict(self._input,1,self._ctx)
 
@@ -275,114 +323,6 @@ class hmParser ( Parser ):
             self._errHandler.recover(self, re)
         finally:
             self.unrollRecursionContexts(_parentctx)
-        return localctx
-
-
-    class AtomContext(ParserRuleContext):
-        __slots__ = 'parser'
-
-        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
-            super().__init__(parent, invokingState)
-            self.parser = parser
-
-
-        def getRuleIndex(self):
-            return hmParser.RULE_atom
-
-     
-        def copyFrom(self, ctx:ParserRuleContext):
-            super().copyFrom(ctx)
-
-
-
-    class OperatorContext(AtomContext):
-
-        def __init__(self, parser, ctx:ParserRuleContext): # actually a hmParser.AtomContext
-            super().__init__(parser)
-            self.copyFrom(ctx)
-
-        def OPERATOR(self):
-            return self.getToken(hmParser.OPERATOR, 0)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitOperator" ):
-                return visitor.visitOperator(self)
-            else:
-                return visitor.visitChildren(self)
-
-
-    class VariableContext(AtomContext):
-
-        def __init__(self, parser, ctx:ParserRuleContext): # actually a hmParser.AtomContext
-            super().__init__(parser)
-            self.copyFrom(ctx)
-
-        def VARIABLE(self):
-            return self.getToken(hmParser.VARIABLE, 0)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitVariable" ):
-                return visitor.visitVariable(self)
-            else:
-                return visitor.visitChildren(self)
-
-
-    class NumberContext(AtomContext):
-
-        def __init__(self, parser, ctx:ParserRuleContext): # actually a hmParser.AtomContext
-            super().__init__(parser)
-            self.copyFrom(ctx)
-
-        def NUMBER(self):
-            return self.getToken(hmParser.NUMBER, 0)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitNumber" ):
-                return visitor.visitNumber(self)
-            else:
-                return visitor.visitChildren(self)
-
-
-
-    def atom(self):
-
-        localctx = hmParser.AtomContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 4, self.RULE_atom)
-        try:
-            self.state = 34
-            self._errHandler.sync(self)
-            token = self._input.LA(1)
-            if token in [3]:
-                localctx = hmParser.OperatorContext(self, localctx)
-                self.enterOuterAlt(localctx, 1)
-                self.state = 29
-                self.match(hmParser.T__2)
-                self.state = 30
-                self.match(hmParser.OPERATOR)
-                self.state = 31
-                self.match(hmParser.T__3)
-                pass
-            elif token in [5]:
-                localctx = hmParser.NumberContext(self, localctx)
-                self.enterOuterAlt(localctx, 2)
-                self.state = 32
-                self.match(hmParser.NUMBER)
-                pass
-            elif token in [6]:
-                localctx = hmParser.VariableContext(self, localctx)
-                self.enterOuterAlt(localctx, 3)
-                self.state = 33
-                self.match(hmParser.VARIABLE)
-                pass
-            else:
-                raise NoViableAltException(self)
-
-        except RecognitionException as re:
-            localctx.exception = re
-            self._errHandler.reportError(self, re)
-            self._errHandler.recover(self, re)
-        finally:
-            self.exitRule()
         return localctx
 
 
@@ -399,7 +339,7 @@ class hmParser ( Parser ):
 
     def expr_sempred(self, localctx:ExprContext, predIndex:int):
             if predIndex == 0:
-                return self.precpred(self._ctx, 2)
+                return self.precpred(self._ctx, 5)
          
 
 
