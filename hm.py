@@ -60,7 +60,7 @@ class TreeVisitor(hmVisitor):
         self.current_id = 0                 # identificador unico que se da a cada uno
         self.symbol_table = symbol_table    # tabla de simbolos hasta ahora
 
-    # Retorna un identificador nuevo unico
+    # retorna un identificador nuevo unico
     def next_id(self):
         self.current_id += 1
         return self.current_id
@@ -119,6 +119,8 @@ class TreeVisitor(hmVisitor):
 ######################################## MAIN ########################################
 ######################################################################################
 
+#--------------------------- CONTROL DE INTERFAZ ESTATICA ----------------------------
+
 st.write("""
          # El analizador de tipos HinNer
          #### Proyecto de lenguajes de programación - Q2 2023/24
@@ -141,30 +143,34 @@ stInput = st.text_input("Entrada",
                         help="Introduce la expresión y presiona *Enter* en tu teclado para compilarla"
                         )
 
+#--------------------- CONTROL DE LA LOGICA E INTERFAZ DINAMICA ----------------------
+
 input_stream = InputStream(stInput)
 lexer = hmLexer(input_stream)
 token_stream = CommonTokenStream(lexer)
 parser = hmParser(token_stream)
 tree = parser.root()
 
-# Para no perder la tabla de simbolos cada vez que haya rerun de streamlit se usa session_state
+# para no perder la tabla de simbolos cada vez que haya rerun de streamlit se usa session_state
 if 'symbol_table' not in st.session_state:
     st.session_state['symbol_table'] = {}
 
-if parser.getNumberOfSyntaxErrors() != 0:
+if parser.getNumberOfSyntaxErrors() != 0:       # si hay errores de sintaxis se notifica
     st.error(f"{parser.getNumberOfSyntaxErrors()} error(s) de sintaxi.", icon="🚨")
-else:
+else:                                           # en caso contrario se recorre el ast
     visitor = TreeVisitor(st.session_state['symbol_table'])
     result_tree = visitor.visit(tree)
     
+    # se actualiza la tabla "recurrente" y se pinta con la funcion streamlit.table usando DataFrame de pandas
     st.session_state['symbol_table'] = visitor.symbol_table
     st.write("#### Contenido de la tabla de símbolos")
     symbol_table_data = [{"Símbolo": k, "Tipo": v} for k, v in st.session_state['symbol_table'].items()]
     symbol_table_df = pd.DataFrame(symbol_table_data)
     st.table(symbol_table_df)
     
-    # En caso que haya sido una definicion de tipo (donde el visitador retorna Void()), no se imprime el arbol
+    # en caso que haya sido una definicion de tipo (donde el visitador retorna Void()), no se imprime el arbol
     if isinstance(result_tree, Node):
+        # en caso contrario, se imprime el grafo con la funcion streamlit.graphviz_chart usando DOT
         graphviz_code = fromTreeToDotGraph(result_tree)
         st.graphviz_chart(graphviz_code)
 
