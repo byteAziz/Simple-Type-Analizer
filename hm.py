@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import Optional
 
 from antlr4 import InputStream, CommonTokenStream
 from hmLexer import hmLexer
@@ -19,6 +20,7 @@ class Node:
     symb: str       # simbolo que representa el nodo
     left: Tree
     right: Tree
+    type: Optional[str] = None      # tipo que representan
 
 class Void:
     pass
@@ -33,8 +35,10 @@ def fromTreeToDotGraph(tree: Tree) -> str:
         if isinstance(node, Void):
             return
         if isinstance(node, Node):
+            node_label = f'{node.symb}\n({node.type})'
+
             # mediante el identificador unico, definimos el texto de los vertices
-            dot_lines.append(f'    {node.id} [label="{node.symb}"];')
+            dot_lines.append(f'    {node.id} [label="{node_label}"];')
             
             # se crean las aristas en orden
             if isinstance(node.left, Node):
@@ -51,6 +55,30 @@ def fromTreeToDotGraph(tree: Tree) -> str:
     return "\n".join(dot_lines)
 
 
+def labelTypes(tree: Tree, symbol_table: dict, tempo_types: dict) -> None:
+    # retorna la letra del abecedario correspondiente al numero
+    def getLetterByNumber(number):
+        return chr(ord('a') + number)
+
+    if isinstance(tree, Node):
+        if tree.symb in symbol_table:           # esta en la tabla de tipos dada por el usuario
+            tree.type = symbol_table[tree.symb]
+
+        elif tree.symb in tempo_types:          # esta en la tabla de tipos usada en el recorrido
+            tree.type = tempo_types[tree.symb]
+
+        else:                                   # se asigna nuevo tipo dado por la letra calculada
+            if (tree.symb not in {'λ', '@'}):
+                newType = getLetterByNumber(len(tempo_types))
+                tree.type = newType
+                tempo_types[tree.symb] = newType
+            else:
+                tree.type = "TBD"
+            
+            
+        labelTypes(tree.left, symbol_table, tempo_types)
+        labelTypes(tree.right, symbol_table, tempo_types)
+
 ######################################################################################
 ############################## DEFINICION DEL VISITADOR ##############################
 ######################################################################################
@@ -58,7 +86,7 @@ def fromTreeToDotGraph(tree: Tree) -> str:
 class TreeVisitor(hmVisitor):
     def __init__(self, symbol_table):
         self.current_id = 0                 # identificador unico que se da a cada uno
-        self.symbol_table = symbol_table    # tabla de simbolos hasta ahora
+        self.symbol_table = symbol_table    # tabla de simbolos hasta ahora, usado cuando se define un tipo
 
     # retorna un identificador nuevo unico
     def next_id(self):
@@ -102,7 +130,7 @@ class TreeVisitor(hmVisitor):
     # term : '(' OPERATOR ')'           # OperatorNP
     def visitOperatorNP(self, ctx:hmParser.OperatorNPContext):
         operator = ctx.OPERATOR().getText()
-        return Node(self.next_id(), operator, Void(), Void())
+        return Node(self.next_id(), f"({operator})", Void(), Void())
 
     # term : NUMBER                     # Number
     def visitNumber(self, ctx:hmParser.NumberContext):
@@ -140,7 +168,7 @@ st.write("""
 
 stInput = st.text_input("Entrada", 
                         value="Ejemplo",
-                        help="Introduce la expresión y presiona *Enter* en tu teclado para compilarla"
+                        help="Introduce la expresión y presiona *Enter* en tu teclado para enviarla"
                         )
 
 #--------------------- CONTROL DE LA LOGICA E INTERFAZ DINAMICA ----------------------
@@ -170,7 +198,8 @@ else:                                           # en caso contrario se recorre e
     
     # en caso que haya sido una definicion de tipo (donde el visitador retorna Void()), no se imprime el arbol
     if isinstance(result_tree, Node):
-        # en caso contrario, se imprime el grafo con la funcion streamlit.graphviz_chart usando DOT
+        # en caso contrario, se etiquetan los nodos con sus tipos y se imprime con streamlit.graphviz_chart usando DOT
+        labelTypes(result_tree, st.session_state['symbol_table'], {})
         graphviz_code = fromTreeToDotGraph(result_tree)
         st.graphviz_chart(graphviz_code)
 
