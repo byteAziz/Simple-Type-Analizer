@@ -35,7 +35,7 @@ def fromTreeToDotGraph(tree: Tree) -> str:
         if isinstance(node, Void):
             return
         if isinstance(node, Node):
-            node_label = f'{node.symb}\n({node.type})'
+            node_label = f'{node.symb}\n{node.type}'
 
             # mediante el identificador unico, definimos el texto de los vertices
             dot_lines.append(f'    {node.id} [label="{node_label}"];')
@@ -61,23 +61,28 @@ def labelTypes(tree: Tree, symbol_table: dict, tempo_types: dict) -> None:
         return chr(ord('a') + number)
 
     if isinstance(tree, Node):
-        if tree.symb in symbol_table:           # esta en la tabla de tipos dada por el usuario
-            tree.type = symbol_table[tree.symb]
+        labelTypes(tree.left, symbol_table, tempo_types)
+            
+        labelTypes(tree.right, symbol_table, tempo_types)
+        if tree.symb in symbol_table:      
+            tree.type = symbol_table[tree.symb]     # si esta en la tabla de tipos dada por el usuario
 
-        elif tree.symb in tempo_types:          # esta en la tabla de tipos usada en el recorrido
-            tree.type = tempo_types[tree.symb]
+        elif tree.symb in tempo_types:      
+            tree.type = tempo_types[tree.symb]      # si esta en la tabla de tipos usada en el recorrido
 
-        else:                                   # se asigna nuevo tipo dado por la letra calculada
-            if (tree.symb not in {'λ', '@'}):
+        else:                                       # se asigna nuevo tipo dado por la letra calculada
+            if (tree.symb in {'λ', '@'}):
+                st.write(f"Debug: Current node symbol: {tree.symb}")
+                st.write(f"Debug: Current symbol table: {symbol_table}")
+                if isinstance(tree.left, Node) and isinstance(tree.right, Node):    # (se cumple siempre)
+                    st.write(f"Debug: Left child type: {tree.left.type}")
+                    st.write(f"Debug: Right child type: {tree.right.type}")
+
+            else:
                 newType = getLetterByNumber(len(tempo_types))
                 tree.type = newType
                 tempo_types[tree.symb] = newType
-            else:
-                tree.type = "TBD"
-            
-            
-        labelTypes(tree.left, symbol_table, tempo_types)
-        labelTypes(tree.right, symbol_table, tempo_types)
+
 
 ######################################################################################
 ############################## DEFINICION DEL VISITADOR ##############################
@@ -202,6 +207,3 @@ else:                                           # en caso contrario se recorre e
         labelTypes(result_tree, st.session_state['symbol_table'], {})
         graphviz_code = fromTreeToDotGraph(result_tree)
         st.graphviz_chart(graphviz_code)
-
-
-st.write(tree.toStringTree(recog=parser))
