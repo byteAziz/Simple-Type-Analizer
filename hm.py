@@ -99,9 +99,21 @@ class TreeVisitor(hmVisitor):
 	
     # typeDefinition : term '::' type
     def visitTypeDefinition(self, ctx: hmParser.TypeDefinitionContext):
+        # dado un tipo de la forma "a -> b -> c", retorna el tipo con los parentesis
+        def addParens(type_expr: str) -> str:
+            types = type_expr.split('->')
+            if len(types) == 1:             
+                return f'({type_expr.strip()})'
+        
+            result = types[-1].strip()
+            for part in reversed(types[:-1]):
+                result = f'({part.strip()} -> {result})'
+            return result
+
         term = ctx.term().getText()
-        type_expr = ctx.type_().getText()
-        self.symbol_table[term] = type_expr
+        typeWithoutFormat = ctx.type_().getText()
+        typeFormatted = addParens(typeWithoutFormat)
+        self.symbol_table[term] = typeFormatted
         return Void()
     
     # abstraction : '\\' VARIABLE '->' expr;
