@@ -1,6 +1,5 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Optional
 
 from antlr4 import InputStream, CommonTokenStream
 from hmLexer import hmLexer
@@ -9,6 +8,71 @@ from hmVisitor import hmVisitor
 
 import streamlit as st
 import pandas as pd
+
+
+
+######################################################################################
+############################ DECLARACION DE  EXCEPCIONES #############################
+######################################################################################
+
+class TipoNoDefinido(Exception):
+    def __init__(self, simbolo: str):
+        self.simbolo = simbolo
+        self.message = f"El tipo del simbolo ```{simbolo}``` no ha sido definido."
+        super().__init__(self.message)
+
+class InconsistenciaDeTipos(Exception):
+    def __init__(self, aplicacion_o_abstraccion: str , tipo1: str, tipo2: str):
+        self.aplicacion_o_abstraccion = aplicacion_o_abstraccion
+        self.tipo1 = tipo1
+        self.tipo2 = tipo2
+        self.message = f"Ha habido un error al inferir en una {aplicacion_o_abstraccion} con los siguientes tipos: ```{tipo1}``` vs ```{tipo2}```."
+        super().__init__(self.message)
+
+class DemasiadasAplicaciones(Exception):
+    def __init__(self):
+        self.message = f"Se ha superado el maximo de tipos admitidos sobre una aplicación."
+        super().__init__(self.message)
+
+
+######################################################################################
+############################# INTERCAMBIO DE FORMATO DE TIPOS ########################
+######################################################################################
+
+# Durante el manejo del programa, los tipos se consideran str, y existen tres formatos diferentes:
+# 1. inputFormat: El que se recibe del usuario dado por la gramatica: "A -> B -> C"
+# 2. basicFormat: El que se usa para inferir los tipos para un manejo simple: "ABC"
+# 3. outputFormat: El que se muestra al usuario: "(A -> (B -> C))"
+
+# Pasa del formato de entrada al formato de salida: de "A -> B -> C" a "(A -> (B -> C))"
+def fromInputToOutputFormat(type_expr: str) -> str:
+    types = type_expr.split('->')
+    if len(types) == 1:             
+        return f'({type_expr.strip()})'
+
+    result = types[-1].strip()
+    for part in reversed(types[:-1]):
+        result = f'({part.strip()} -> {result})'
+    return result
+
+# Pasa del formato de salida al formato basico: de "(A -> (B -> C))" a "ABC"
+def fromOutputToBasicFormat(type_expr: str) -> str:
+    types = type_expr.split('->')
+    for i in range(len(types)):
+        types[i] = types[i].strip("() ")
+    return "".join(types)
+
+# Pasa del formato basico al formato de salida: de "ABC" a "(A -> (B -> C))"
+def fromBasicToOutputFormat(type_expr: str) -> str:
+    types = list(type_expr)
+    if len(types) == 1:             
+        return f'({type_expr})'
+
+    result = types[-1]
+    for part in reversed(types[:-1]):
+        result = f'({part} -> {result})'
+    return result
+
 
 ######################################################################################
 ################################ DEFINICION DEL ARBOL ################################
@@ -20,7 +84,8 @@ class Node:
     symb: str       # simbolo que representa el nodo
     left: Tree
     right: Tree
-    type: Optional[str] = None      # tipo que representan
+    type: str = ""              # tipo que representan
+    hasDefType: bool = False    # indica si el tipo es definitivo, es decir, declarado por el usuario o inferido
 
 class Void:
     pass
@@ -33,8 +98,6 @@ Tree = Node | Void
 def fromTreeToDotGraph(tree: Tree) -> str:
     # recorre el arbol de la forma adecuada para crear el grafo
     def traverse(node: Tree, dot_lines: list):
-        if isinstance(node, Void):
-            return
         if isinstance(node, Node):
             node_label = f'{node.symb}\n{node.type}'
 
@@ -63,7 +126,8 @@ def labelTypes(tree: Tree, symbol_table: dict, temporal_types: dict = {}) -> Non
 
     if isinstance(tree, Node):
         if tree.symb in symbol_table:               # si esta en la tabla de tipos dada por el usuario
-            tree.type = symbol_table[tree.symb]     
+            tree.type = symbol_table[tree.symb]    
+            tree.hasDefType = True 
 
         elif tree.symb in temporal_types:           # si esta en la tabla de tipos unica del recorrido
             tree.type = temporal_types[tree.symb]      
@@ -78,6 +142,37 @@ def labelTypes(tree: Tree, symbol_table: dict, temporal_types: dict = {}) -> Non
 
         labelTypes(tree.left, symbol_table, temporal_types)
         labelTypes(tree.right, symbol_table, temporal_types)
+
+# dado un arbol, infiere los tipos que no sean definidos a partir de la aplicacion 
+# y retorna un diccionario con los tipos inferidos
+def inferApplication(tree: Tree, tiposInferidos: dict) -> None:
+    if isinstance(tree, Node):
+        inferApplication(tree.left, tiposInferidos)
+        inferApplication(tree.right, tiposInferidos)
+
+        if tree.symb == '@' and not tree.hasDefType and isinstance(tree.left, Node) and isinstance(tree.right, Node):
+            leftBasicType = fromOutputToBasicFormat(tree.left.type)
+            rightBasicType = fromOutputToBasicFormat(tree.right.type)
+
+            if not tree.left.hasDefType:                    # si el tipo de la izquierda no esta definido
+                raise TipoNoDefinido(tree.left.symb)
+            
+            if len(leftBasicType) == 1:                     # de la forma "(N)"
+                raise DemasiadasAplicaciones()
+            
+            if tree.right.hasDefType:                       # si el tipo de la derecha esta definido
+                if leftBasicType[0] != rightBasicType[0]:   # pero no coincide con el de la izquierda
+                    raise InconsistenciaDeTipos("aplicación", leftBasicType[0], rightBasicType[0])    
+                
+            else:                                   # si no esta definido, se asigna el primer tipo de la izquierda
+                tiposInferidos[tree.right.type] = f"{fromBasicToOutputFormat(leftBasicType[0])}"
+                tree.right.type = f"{fromBasicToOutputFormat(leftBasicType[0])}"
+                tree.right.hasDefType = True
+
+            # a la aplicacion se le asigna el tipo de la derecha a partir del segundo tipo del de la izquierda
+            tiposInferidos[tree.type] = f"{fromBasicToOutputFormat(leftBasicType[1:])}"
+            tree.type = f"{fromBasicToOutputFormat(leftBasicType[1:])}"
+            tree.hasDefType = True
 
 ######################################################################################
 ############################## DEFINICION DEL VISITADOR ##############################
@@ -99,20 +194,9 @@ class TreeVisitor(hmVisitor):
 	
     # typeDefinition : assignable '::' type
     def visitTypeDefinition(self, ctx: hmParser.TypeDefinitionContext):
-        # dado un tipo de la forma "a -> b -> c", retorna el tipo con los parentesis
-        def addParens(type_expr: str) -> str:
-            types = type_expr.split('->')
-            if len(types) == 1:             
-                return f'({type_expr.strip()})'
-        
-            result = types[-1].strip()
-            for part in reversed(types[:-1]):
-                result = f'({part.strip()} -> {result})'
-            return result
-
         term = ctx.assignable().getText()
         typeWithoutFormat = ctx.type_().getText()
-        typeFormatted = addParens(typeWithoutFormat)
+        typeFormatted = fromInputToOutputFormat(typeWithoutFormat)
         self.symbol_table[term] = typeFormatted
         return Void()
     
@@ -165,17 +249,15 @@ st.write("""
          # El analizador de tipos HinNer
          #### Proyecto de lenguajes de programación - Q2 2023/24
          ***
-         Códigos de prueba para tener a mano:  
-         ```
-         2  
-         x  
-         (+) 2  
-         \\x -> (+) 2 x  
-         (\\x -> (+) 2 x) 4  
-         ((\\x -> (+) 2 x) ((\\y -> (+) 3 y) 6))  
-         2 :: N  
+         Códigos de prueba para tener a mano:
+         ``` 
+         \\x -> (+) 2 x
+         (\\x -> (+) 2 x) 4
+         ((\\x -> (+) 2 x) ((\\y -> (+) 3 y) 6))
+         2 :: N
          (+) :: N -> N -> N
-         ```  
+         (+) 2
+         ```
          """)
 
 stInput = st.text_input("Entrada", 
@@ -196,21 +278,38 @@ if 'symbol_table' not in st.session_state:
     st.session_state['symbol_table'] = {}
 
 if parser.getNumberOfSyntaxErrors() != 0:       # si hay errores de sintaxis se notifica
-    st.error(f"{parser.getNumberOfSyntaxErrors()} error(s) de sintaxi.", icon="🚨")
+    st.error(f"{parser.getNumberOfSyntaxErrors()} error(es) de sintaxis.", icon="🚨")
 else:                                           # en caso contrario se recorre el ast
     visitor = TreeVisitor(st.session_state['symbol_table'])
     result_tree = visitor.visit(tree)
     
     # se actualiza la tabla "recurrente" y se pinta con la funcion streamlit.table usando DataFrame de pandas
     st.session_state['symbol_table'] = visitor.symbol_table
-    st.write("#### Contenido de la tabla de símbolos")
+    st.write("##### Contenido de la tabla de símbolos")
     symbol_table_data = [{"Símbolo": k, "Tipo": v} for k, v in st.session_state['symbol_table'].items()]
     symbol_table_df = pd.DataFrame(symbol_table_data)
     st.table(symbol_table_df)
     
-    # en caso que haya sido una definicion de tipo (donde el visitador retorna Void()), no se imprime el arbol
+    # en caso que no haya sido una definicion de tipo (donde el visitador no retorna un Node sino Void)
     if isinstance(result_tree, Node):
-        # en caso contrario, se etiquetan los nodos con sus tipos y se imprime con streamlit.graphviz_chart usando DOT
+        # se etiquetan los nodos con sus tipos y se imprime con streamlit.graphviz_chart usando DOT
+        st.write("##### Árbol de tipos")
         labelTypes(result_tree, st.session_state['symbol_table'])
         graphviz_code = fromTreeToDotGraph(result_tree)
         st.graphviz_chart(graphviz_code)
+
+        # se crea un boton que al pulsar se hace la inferencia de tipos y se muestra en una tabla
+        if st.button("Inferir tipos"):
+            st.write("##### Inferencia de aplicaciones")
+            try:
+                tiposInferidos = {}
+                inferApplication(result_tree, tiposInferidos)
+            except (InconsistenciaDeTipos, DemasiadasAplicaciones, TipoNoDefinido) as it:
+                st.error(f"ERROR: {it}", icon="🚨")
+            else:
+                graphviz_code = fromTreeToDotGraph(result_tree)
+                st.graphviz_chart(graphviz_code)
+                infered_types_data = [{"Tipo": k, "Inferido": v} for k, v in tiposInferidos.items()]
+                infered_types_df = pd.DataFrame(infered_types_data)
+                st.table(infered_types_df)
+        
