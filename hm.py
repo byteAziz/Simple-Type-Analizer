@@ -15,6 +15,7 @@ import pandas as pd
 ############################ DECLARACION DE  EXCEPCIONES #############################
 ######################################################################################
 
+
 class TipoNoDefinido(Exception):
     def __init__(self, simbolo: str):
         self.simbolo = simbolo
@@ -35,9 +36,11 @@ class DemasiadasAplicaciones(Exception):
         super().__init__(self.message)
 
 
+
 ######################################################################################
 ############################# INTERCAMBIO DE FORMATO DE TIPOS ########################
 ######################################################################################
+
 
 # Durante el manejo del programa, los tipos se consideran str, y existen tres formatos diferentes:
 # 1. inputFormat: El que se recibe del usuario dado por la gramatica: "A -> B -> C"
@@ -48,7 +51,7 @@ class DemasiadasAplicaciones(Exception):
 def fromInputToOutputFormat(type_expr: str) -> str:
     types = type_expr.split('->')
     if len(types) == 1:             
-        return f'({type_expr.strip()})'
+        return f'{type_expr.strip()}'
 
     result = types[-1].strip()
     for part in reversed(types[:-1]):
@@ -66,7 +69,7 @@ def fromOutputToBasicFormat(type_expr: str) -> str:
 def fromBasicToOutputFormat(type_expr: str) -> str:
     types = list(type_expr)
     if len(types) == 1:             
-        return f'({type_expr})'
+        return f'{type_expr}'
 
     result = types[-1]
     for part in reversed(types[:-1]):
@@ -74,9 +77,11 @@ def fromBasicToOutputFormat(type_expr: str) -> str:
     return result
 
 
+
 ######################################################################################
 ################################ DEFINICION DEL ARBOL ################################
 ######################################################################################
+
 
 @dataclass
 class Node:
@@ -91,6 +96,7 @@ class Void:
     pass
         
 Tree = Node | Void
+
 
 #-------------------------------- FUNCIONES DEL ARBOL --------------------------------
 
@@ -145,38 +151,64 @@ def labelTypes(tree: Tree, symbol_table: dict, temporal_types: dict = {}) -> Non
 
 # dado un arbol, infiere los tipos que no sean definidos a partir de la aplicacion 
 # y retorna un diccionario con los tipos inferidos
-def inferApplication(tree: Tree, tiposInferidos: dict) -> None:
+def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
     if isinstance(tree, Node):
-        inferApplication(tree.left, tiposInferidos)
-        inferApplication(tree.right, tiposInferidos)
+        inferTypes(tree.left, tiposInferidos)
+        inferTypes(tree.right, tiposInferidos)
 
-        if tree.symb == '@' and not tree.hasDefType and isinstance(tree.left, Node) and isinstance(tree.right, Node):
+        if not tree.hasDefType and isinstance(tree.left, Node) and isinstance(tree.right, Node):
             leftBasicType = fromOutputToBasicFormat(tree.left.type)
             rightBasicType = fromOutputToBasicFormat(tree.right.type)
 
-            if not tree.left.hasDefType:                    # si el tipo de la izquierda no esta definido
-                raise TipoNoDefinido(tree.left.symb)
-            
-            if len(leftBasicType) == 1:                     # de la forma "(N)"
-                raise DemasiadasAplicaciones()
-            
-            if tree.right.hasDefType:                       # si el tipo de la derecha esta definido
-                if leftBasicType[0] != rightBasicType[0]:   # pero no coincide con el de la izquierda
-                    raise InconsistenciaDeTipos("aplicación", leftBasicType[0], rightBasicType[0])    
-                
-            else:                                   # si no esta definido, se asigna el primer tipo de la izquierda
-                tiposInferidos[tree.right.type] = f"{fromBasicToOutputFormat(leftBasicType[0])}"
-                tree.right.type = f"{fromBasicToOutputFormat(leftBasicType[0])}"
-                tree.right.hasDefType = True
+            ######## Inferencia de aplicaciones ########
 
-            # a la aplicacion se le asigna el tipo de la derecha a partir del segundo tipo del de la izquierda
-            tiposInferidos[tree.type] = f"{fromBasicToOutputFormat(leftBasicType[1:])}"
-            tree.type = f"{fromBasicToOutputFormat(leftBasicType[1:])}"
-            tree.hasDefType = True
+            if tree.symb == '@':
+                if not tree.left.hasDefType:                    # si el tipo de la izquierda no esta definido
+                    raise TipoNoDefinido(tree.left.symb)
+                
+                if len(leftBasicType) == 1:                     # de la forma "(N)"
+                    raise DemasiadasAplicaciones()
+                
+                if tree.right.hasDefType:                       # si el tipo de la derecha esta definido
+                    if leftBasicType[0] != rightBasicType[0]:   # pero no coincide con el de la izquierda
+                        raise InconsistenciaDeTipos("aplicación", leftBasicType[0], rightBasicType[0])    
+                    
+                else:                                   # si no esta definido, se asigna el primer tipo de la izquierda
+                    tiposInferidos[tree.right.type] = f"{fromBasicToOutputFormat(leftBasicType[0])}"
+                    tree.right.type = f"{fromBasicToOutputFormat(leftBasicType[0])}"
+                    tree.right.hasDefType = True
+
+                # a la aplicacion se le asigna el tipo de la derecha a partir del segundo tipo del de la izquierda
+                tiposInferidos[tree.type] = f"{fromBasicToOutputFormat(leftBasicType[1:])}"
+                tree.type = f"{fromBasicToOutputFormat(leftBasicType[1:])}"
+                tree.hasDefType = True
+
+            ######## Inferencia de abstracciones ########
+
+            if tree.symb == 'λ':
+                if not tree.right.hasDefType:               # si el tipo de la derecha no esta definido
+                    raise TipoNoDefinido(tree.right.symb)
+                
+                if not tree.left.hasDefType:
+                    if tree.left.type not in tiposInferidos:
+                        raise TipoNoDefinido(tree.left.symb)
+                    else:
+                        tree.left.type = tiposInferidos[tree.left.type]
+                        tree.left.hasDefType = True
+                        leftBasicType = fromOutputToBasicFormat(tree.left.type)
+                
+                # a la abstraccion se le asigna el tipo del de la izquierda con una flecha al tipo del de la derecha
+                treeBasicType = leftBasicType + rightBasicType
+                tiposInferidos[tree.type] = f"{fromBasicToOutputFormat(treeBasicType)}"
+                tree.type = f"{fromBasicToOutputFormat(treeBasicType)}"
+                tree.hasDefType = True
+
+
 
 ######################################################################################
 ############################## DEFINICION DEL VISITADOR ##############################
 ######################################################################################
+
 
 class TreeVisitor(hmVisitor):
     def __init__(self, symbol_table):
@@ -195,8 +227,8 @@ class TreeVisitor(hmVisitor):
     # typeDefinition : assignable '::' type
     def visitTypeDefinition(self, ctx: hmParser.TypeDefinitionContext):
         term = ctx.assignable().getText()
-        typeWithoutFormat = ctx.type_().getText()
-        typeFormatted = fromInputToOutputFormat(typeWithoutFormat)
+        inputType = ctx.type_().getText()
+        typeFormatted = fromInputToOutputFormat(inputType)
         self.symbol_table[term] = typeFormatted
         return Void()
     
@@ -239,9 +271,11 @@ class TreeVisitor(hmVisitor):
         return Node(self.next_id(), variable, Void(), Void())
 
    
+
 ######################################################################################
 ######################################## MAIN ########################################
 ######################################################################################
+
 
 #--------------------------- CONTROL DE INTERFAZ ESTATICA ----------------------------
 
@@ -300,10 +334,10 @@ else:                                           # en caso contrario se recorre e
 
         # se crea un boton que al pulsar se hace la inferencia de tipos y se muestra en una tabla
         if st.button("Inferir tipos"):
-            st.write("##### Inferencia de aplicaciones")
+            st.write("##### Inferencia de tipos")
             try:
                 tiposInferidos = {}
-                inferApplication(result_tree, tiposInferidos)
+                inferTypes(result_tree, tiposInferidos)
             except (InconsistenciaDeTipos, DemasiadasAplicaciones, TipoNoDefinido) as it:
                 st.error(f"ERROR: {it}", icon="🚨")
             else:
