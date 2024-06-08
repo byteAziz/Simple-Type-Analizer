@@ -10,10 +10,9 @@ import streamlit as st
 import pandas as pd
 
 
-
-######################################################################################
-############################ DECLARACION DE  EXCEPCIONES #############################
-######################################################################################
+# ################################################################################## #
+# ########################## DECLARACION DE  EXCEPCIONES ########################### #
+# ################################################################################## #
 
 
 class TipoNoDefinido(Exception):
@@ -22,24 +21,25 @@ class TipoNoDefinido(Exception):
         self.message = f"El tipo del simbolo ```{simbolo}``` no ha sido definido."
         super().__init__(self.message)
 
+
 class InconsistenciaDeTipos(Exception):
-    def __init__(self, aplicacion_o_abstraccion: str , tipo1: str, tipo2: str):
+    def __init__(self, aplicacion_o_abstraccion: str, tipo1: str, tipo2: str):
         self.aplicacion_o_abstraccion = aplicacion_o_abstraccion
         self.tipo1 = tipo1
         self.tipo2 = tipo2
         self.message = f"Ha habido un error al inferir en una {aplicacion_o_abstraccion} con los siguientes tipos: ```{tipo1}``` vs ```{tipo2}```."
         super().__init__(self.message)
 
+
 class DemasiadasAplicaciones(Exception):
     def __init__(self):
-        self.message = f"Se ha superado el maximo de tipos admitidos sobre una aplicación."
+        self.message = "Se ha superado el maximo de tipos admitidos sobre una aplicación."
         super().__init__(self.message)
 
 
-
-######################################################################################
-############################# INTERCAMBIO DE FORMATO DE TIPOS ########################
-######################################################################################
+# ################################################################################## #
+# ######################### CONVERSION DE FORMATO DE TIPOS ######################### #
+# ################################################################################## #
 
 
 # Durante el manejo del programa, los tipos se consideran str, y existen tres formatos diferentes:
@@ -50,13 +50,14 @@ class DemasiadasAplicaciones(Exception):
 # Pasa del formato de entrada al formato de salida: de "A -> B -> C" a "(A -> (B -> C))"
 def fromInputToOutputFormat(type_expr: str) -> str:
     types = type_expr.split('->')
-    if len(types) == 1:             
+    if len(types) == 1:
         return f'{type_expr.strip()}'
 
     result = types[-1].strip()
     for part in reversed(types[:-1]):
         result = f'({part.strip()} -> {result})'
     return result
+
 
 # Pasa del formato de salida al formato basico: de "(A -> (B -> C))" a "ABC"
 def fromOutputToBasicFormat(type_expr: str) -> str:
@@ -65,10 +66,11 @@ def fromOutputToBasicFormat(type_expr: str) -> str:
         types[i] = types[i].strip("() ")
     return "".join(types)
 
+
 # Pasa del formato basico al formato de salida: de "ABC" a "(A -> (B -> C))"
 def fromBasicToOutputFormat(type_expr: str) -> str:
     types = list(type_expr)
-    if len(types) == 1:             
+    if len(types) == 1:
         return f'{type_expr}'
 
     result = types[-1]
@@ -77,10 +79,9 @@ def fromBasicToOutputFormat(type_expr: str) -> str:
     return result
 
 
-
-######################################################################################
-################################ DEFINICION DEL ARBOL ################################
-######################################################################################
+# ################################################################################## #
+# ############################## DEFINICION DEL ARBOL ############################## #
+# ################################################################################## #
 
 
 @dataclass
@@ -92,37 +93,40 @@ class Node:
     type: str = ""              # tipo que representan
     hasDefType: bool = False    # indica si el tipo es definitivo, es decir, declarado por el usuario o inferido
 
+
 class Void:
     pass
-        
+
+
 Tree = Node | Void
 
 
-#-------------------------------- FUNCIONES DEL ARBOL --------------------------------
+# ------------------------------- FUNCIONES DEL ARBOL ------------------------------ #
 
 # dado una arbol, retorna el codigo para representar como un grafo usando DOT
 def fromTreeToDotGraph(tree: Tree) -> str:
     # recorre el arbol de la forma adecuada para crear el grafo
-    def traverse(node: Tree, dot_lines: list):
+    def traverse(node: Tree, dotLines: list):
         if isinstance(node, Node):
             node_label = f'{node.symb}\n{node.type}'
 
             # mediante el identificador unico, definimos el texto de los vertices
-            dot_lines.append(f'    {node.id} [label="{node_label}"];')
-            
+            dotLines.append(f'    {node.id} [label="{node_label}"];')
+
             # se crean las aristas en orden
             if isinstance(node.left, Node):
-                dot_lines.append(f'    {node.id} -- {node.left.id};')
-                traverse(node.left, dot_lines)
+                dotLines.append(f'    {node.id} -- {node.left.id};')
+                traverse(node.left, dotLines)
             if isinstance(node.right, Node):
-                dot_lines.append(f'    {node.id} -- {node.right.id};')
-                traverse(node.right, dot_lines)
+                dotLines.append(f'    {node.id} -- {node.right.id};')
+                traverse(node.right, dotLines)
 
     # se escribe la sintaxis en DOT para crear el grafo mediante el recorrido
-    dot_lines = ["strict graph {"]
-    traverse(tree, dot_lines)
-    dot_lines.append("}")
-    return "\n".join(dot_lines)
+    dotLines = ["strict graph {"]
+    traverse(tree, dotLines)
+    dotLines.append("}")
+    return "\n".join(dotLines)
+
 
 # dado un arbol y la tabla de simbolos prefefinida, retorna el arbol etiquetado
 def labelTypes(tree: Tree, symbol_table: dict, temporal_types: dict = {}) -> None:
@@ -132,11 +136,11 @@ def labelTypes(tree: Tree, symbol_table: dict, temporal_types: dict = {}) -> Non
 
     if isinstance(tree, Node):
         if tree.symb in symbol_table:               # si esta en la tabla de tipos dada por el usuario
-            tree.type = symbol_table[tree.symb]    
-            tree.hasDefType = True 
+            tree.type = symbol_table[tree.symb]
+            tree.hasDefType = True
 
         elif tree.symb in temporal_types:           # si esta en la tabla de tipos unica del recorrido
-            tree.type = temporal_types[tree.symb]      
+            tree.type = temporal_types[tree.symb]
 
         else:                                       # se asigna un nuevo tipo
             newType = getLetterByNumber(len(temporal_types))
@@ -149,7 +153,8 @@ def labelTypes(tree: Tree, symbol_table: dict, temporal_types: dict = {}) -> Non
         labelTypes(tree.left, symbol_table, temporal_types)
         labelTypes(tree.right, symbol_table, temporal_types)
 
-# dado un arbol, infiere los tipos que no sean definidos a partir de la aplicacion 
+
+# dado un arbol, infiere los tipos que no sean definidos a partir de la aplicacion
 # y retorna un diccionario con los tipos inferidos
 def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
     if isinstance(tree, Node):
@@ -160,19 +165,19 @@ def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
             leftBasicType = fromOutputToBasicFormat(tree.left.type)
             rightBasicType = fromOutputToBasicFormat(tree.right.type)
 
-            ######## Inferencia de aplicaciones ########
+            # ------ Inferencia de aplicaciones ------ #
 
             if tree.symb == '@':
                 if not tree.left.hasDefType:                    # si el tipo de la izquierda no esta definido
                     raise TipoNoDefinido(tree.left.symb)
-                
+
                 if len(leftBasicType) == 1:                     # de la forma "(N)"
                     raise DemasiadasAplicaciones()
-                
+
                 if tree.right.hasDefType:                       # si el tipo de la derecha esta definido
                     if leftBasicType[0] != rightBasicType[0]:   # pero no coincide con el de la izquierda
-                        raise InconsistenciaDeTipos("aplicación", leftBasicType[0], rightBasicType[0])    
-                    
+                        raise InconsistenciaDeTipos("aplicación", leftBasicType[0], rightBasicType[0])
+
                 else:                                   # si no esta definido, se asigna el primer tipo de la izquierda
                     tiposInferidos[tree.right.type] = f"{fromBasicToOutputFormat(leftBasicType[0])}"
                     tree.right.type = f"{fromBasicToOutputFormat(leftBasicType[0])}"
@@ -183,12 +188,12 @@ def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
                 tree.type = f"{fromBasicToOutputFormat(leftBasicType[1:])}"
                 tree.hasDefType = True
 
-            ######## Inferencia de abstracciones ########
+            # ------ Inferencia de abstracciones ------ #
 
             if tree.symb == 'λ':
                 if not tree.right.hasDefType:               # si el tipo de la derecha no esta definido
                     raise TipoNoDefinido(tree.right.symb)
-                
+
                 if not tree.left.hasDefType:
                     if tree.left.type not in tiposInferidos:
                         raise TipoNoDefinido(tree.left.symb)
@@ -196,7 +201,7 @@ def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
                         tree.left.type = tiposInferidos[tree.left.type]
                         tree.left.hasDefType = True
                         leftBasicType = fromOutputToBasicFormat(tree.left.type)
-                
+
                 # a la abstraccion se le asigna el tipo del de la izquierda con una flecha al tipo del de la derecha
                 treeBasicType = leftBasicType + rightBasicType
                 tiposInferidos[tree.type] = f"{fromBasicToOutputFormat(treeBasicType)}"
@@ -204,10 +209,9 @@ def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
                 tree.hasDefType = True
 
 
-
-######################################################################################
-############################## DEFINICION DEL VISITADOR ##############################
-######################################################################################
+# ################################################################################## #
+# ############################ DEFINICION DEL VISITADOR ############################ #
+# ################################################################################## #
 
 
 class TreeVisitor(hmVisitor):
@@ -221,9 +225,9 @@ class TreeVisitor(hmVisitor):
         return self.current_id
 
     # root : expr
-    def visitRoot(self, ctx:hmParser.RootContext):
+    def visitRoot(self, ctx: hmParser.RootContext):
         return self.visit(ctx.expr())
-	
+
     # typeDefinition : assignable '::' type
     def visitTypeDefinition(self, ctx: hmParser.TypeDefinitionContext):
         term = ctx.assignable().getText()
@@ -231,53 +235,52 @@ class TreeVisitor(hmVisitor):
         typeFormatted = fromInputToOutputFormat(inputType)
         self.symbol_table[term] = typeFormatted
         return Void()
-    
+
     # abstraction : '\\' VARIABLE '->' expr;
-    def visitAbstraction(self, ctx:hmParser.AbstractionContext):
+    def visitAbstraction(self, ctx: hmParser.AbstractionContext):
         variable = ctx.VARIABLE().getText()
         left = Node(self.next_id(), variable, Void(), Void())
         right = self.visit(ctx.expr())
         return Node(self.next_id(), 'λ', left, right)
 
     # application : application term    # ApplicRecursive
-    def visitApplicRecursive(self, ctx:hmParser.ApplicRecursiveContext):
+    def visitApplicRecursive(self, ctx: hmParser.ApplicRecursiveContext):
         left = self.visit(ctx.application())
         right = self.visit(ctx.term())
         return Node(self.next_id(), '@', left, right)
 
     # application : term term           # ApplicationBase
-    def visitApplicationBase(self, ctx:hmParser.ApplicationBaseContext):
+    def visitApplicationBase(self, ctx: hmParser.ApplicationBaseContext):
         left = self.visit(ctx.term(0))
         right = self.visit(ctx.term(1))
         return Node(self.next_id(), '@', left, right)
 
     # term: '(' expr ')'                # ParenExpr
-    def visitParenExpr(self, ctx:hmParser.ParenExprContext):
+    def visitParenExpr(self, ctx: hmParser.ParenExprContext):
         return self.visit(ctx.expr())
 
     # term : '(' OPERATOR ')'           # OperatorNP
-    def visitOperatorNP(self, ctx:hmParser.OperatorNPContext):
+    def visitOperatorNP(self, ctx: hmParser.OperatorNPContext):
         operator = ctx.OPERATOR().getText()
         return Node(self.next_id(), f"({operator})", Void(), Void())
 
     # term : NUMBER                     # Number
-    def visitNumber(self, ctx:hmParser.NumberContext):
+    def visitNumber(self, ctx: hmParser.NumberContext):
         number = ctx.NUMBER().getText()
         return Node(self.next_id(), number, Void(), Void())
 
     # term : VARIABLE                   # Variable
-    def visitVariable(self, ctx:hmParser.VariableContext):
+    def visitVariable(self, ctx: hmParser.VariableContext):
         variable = ctx.VARIABLE().getText()
         return Node(self.next_id(), variable, Void(), Void())
 
-   
 
-######################################################################################
-######################################## MAIN ########################################
-######################################################################################
+# ################################################################################## #
+# ###################################### MAIN ###################################### #
+# ################################################################################## #
 
 
-#--------------------------- CONTROL DE INTERFAZ ESTATICA ----------------------------
+# -------------------------- CONTROL DE INTERFAZ ESTATICA -------------------------- #
 
 st.write("""
          # El analizador de tipos HinNer
@@ -287,13 +290,13 @@ st.write("""
          """)
 
 stInput = st.text_input("Entrada",
-                        value = "Entrada",
-                        placeholder="\\x -> (+) 2 x",
+                        value="Entrada",
+                        placeholder="\\ x -> (+) 2 x",
                         help="Introduce la expresión y presiona *Enter* en tu teclado para analizarla."
                         )
 
 
-#--------------------- CONTROL DE LA LOGICA E INTERFAZ DINAMICA ----------------------
+# -------------------- CONTROL DE LA LOGICA E INTERFAZ DINAMICA -------------------- #
 
 input_stream = InputStream(stInput)
 lexer = hmLexer(input_stream)
@@ -310,7 +313,7 @@ if parser.getNumberOfSyntaxErrors() != 0:       # si hay errores de sintaxis se 
 else:                                           # en caso contrario se recorre el ast
     visitor = TreeVisitor(st.session_state['symbol_table'])
     result_tree = visitor.visit(tree)
-    
+
     # se actualiza la tabla "recurrente" y se pinta con la funcion streamlit.table usando DataFrame de pandas
     st.session_state['symbol_table'] = visitor.symbol_table
     st.write("##### Contenido de la tabla de símbolos")
@@ -318,7 +321,7 @@ else:                                           # en caso contrario se recorre e
     symbol_table_df = pd.DataFrame(symbol_table_data)
     st.table(symbol_table_df)
     st.divider()
-    
+
     # en caso que no haya sido una definicion de tipo (donde el visitador no retorna un Node sino Void)
     if isinstance(result_tree, Node):
         # se etiquetan los nodos con sus tipos y se imprime con streamlit.graphviz_chart usando DOT
@@ -342,4 +345,3 @@ else:                                           # en caso contrario se recorre e
                 infered_types_data = [{"Tipo": k, "Inferido": v} for k, v in tiposInferidos.items()]
                 infered_types_df = pd.DataFrame(infered_types_data)
                 st.table(infered_types_df)
-        
