@@ -282,22 +282,16 @@ class TreeVisitor(hmVisitor):
 st.write("""
          # El analizador de tipos HinNer
          #### Proyecto de lenguajes de programación - Q2 2023/24
+         ###### Hecho por: Tahir Muhammad Aziz
          ***
-         Códigos de prueba para tener a mano:
-         ``` 
-         \\x -> (+) 2 x
-         (\\x -> (+) 2 x) 4
-         ((\\x -> (+) 2 x) ((\\y -> (+) 3 y) 6))
-         2 :: N
-         (+) :: N -> N -> N
-         (+) 2
-         ```
          """)
 
-stInput = st.text_input("Entrada", 
-                        value="Ejemplo",
-                        help="Introduce la expresión y presiona *Enter* en tu teclado para enviarla"
+stInput = st.text_input("Entrada",
+                        value = "Entrada",
+                        placeholder="\\x -> (+) 2 x",
+                        help="Introduce la expresión y presiona *Enter* en tu teclado para analizarla."
                         )
+
 
 #--------------------- CONTROL DE LA LOGICA E INTERFAZ DINAMICA ----------------------
 
@@ -323,6 +317,7 @@ else:                                           # en caso contrario se recorre e
     symbol_table_data = [{"Símbolo": k, "Tipo": v} for k, v in st.session_state['symbol_table'].items()]
     symbol_table_df = pd.DataFrame(symbol_table_data)
     st.table(symbol_table_df)
+    st.divider()
     
     # en caso que no haya sido una definicion de tipo (donde el visitador no retorna un Node sino Void)
     if isinstance(result_tree, Node):
@@ -334,6 +329,7 @@ else:                                           # en caso contrario se recorre e
 
         # se crea un boton que al pulsar se hace la inferencia de tipos y se muestra en una tabla
         if st.button("Inferir tipos"):
+            st.divider()
             st.write("##### Inferencia de tipos")
             try:
                 tiposInferidos = {}
