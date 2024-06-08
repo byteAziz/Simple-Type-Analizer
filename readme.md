@@ -37,7 +37,7 @@ Este proyecto es un analizador de tipos basado en la gramática de Hindley-Milne
 1. **Definición de Tipos:** Introduce definiciones de tipos en la interfaz de usuario. 
     Por ejemplo, para definir el tipo de `(+)`, se puede escribir `(+) :: N -> N -> N`. Las definiciones
     se mantienen en una tabla de tipos, puedes actualizar el tipo de un operador en notacion prefija o numero
-    volviendo a introducirlo. 
+    volviendo a introducirlo. Para limpiarla, basta con recargar la pagina.
 
 2. **Definición de Expresiones:** Introduce expresiones lambda y aplicaciones de funciones. 
     Por ejemplo, `(\x -> (+) 2 x) 3`.
