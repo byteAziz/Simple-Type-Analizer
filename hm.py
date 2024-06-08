@@ -29,6 +29,7 @@ Tree = Node | Void
 
 #-------------------------------- FUNCIONES DEL ARBOL --------------------------------
 
+# dado una arbol, retorna el codigo para representar como un grafo usando DOT
 def fromTreeToDotGraph(tree: Tree) -> str:
     # recorre el arbol de la forma adecuada para crear el grafo
     def traverse(node: Tree, dot_lines: list):
@@ -54,35 +55,29 @@ def fromTreeToDotGraph(tree: Tree) -> str:
     dot_lines.append("}")
     return "\n".join(dot_lines)
 
-
-def labelTypes(tree: Tree, symbol_table: dict, tempo_types: dict) -> None:
+# dado un arbol y la tabla de simbolos prefefinida, retorna el arbol etiquetado
+def labelTypes(tree: Tree, symbol_table: dict, temporal_types: dict = {}) -> None:
     # retorna la letra del abecedario correspondiente al numero
     def getLetterByNumber(number):
         return chr(ord('a') + number)
 
     if isinstance(tree, Node):
-        labelTypes(tree.left, symbol_table, tempo_types)
-            
-        labelTypes(tree.right, symbol_table, tempo_types)
-        if tree.symb in symbol_table:      
-            tree.type = symbol_table[tree.symb]     # si esta en la tabla de tipos dada por el usuario
+        if tree.symb in symbol_table:               # si esta en la tabla de tipos dada por el usuario
+            tree.type = symbol_table[tree.symb]     
 
-        elif tree.symb in tempo_types:      
-            tree.type = tempo_types[tree.symb]      # si esta en la tabla de tipos usada en el recorrido
+        elif tree.symb in temporal_types:           # si esta en la tabla de tipos unica del recorrido
+            tree.type = temporal_types[tree.symb]      
 
-        else:                                       # se asigna nuevo tipo dado por la letra calculada
-            if (tree.symb in {'λ', '@'}):
-                st.write(f"Debug: Current node symbol: {tree.symb}")
-                st.write(f"Debug: Current symbol table: {symbol_table}")
-                if isinstance(tree.left, Node) and isinstance(tree.right, Node):    # (se cumple siempre)
-                    st.write(f"Debug: Left child type: {tree.left.type}")
-                    st.write(f"Debug: Right child type: {tree.right.type}")
+        else:                                       # se asigna un nuevo tipo
+            newType = getLetterByNumber(len(temporal_types))
+            tree.type = newType
+            if tree.symb in {'λ', '@'}:                             # si es una aplicacion o abstraccion, se guarda con
+                temporal_types[f'{tree.symb}_{tree.id}'] = newType  # una llave unica para no repetir el tipo entre ellos
+            else:                                       # si no lo es, se guarda el propio simbolo
+                temporal_types[tree.symb] = newType     # para identificarlo en las proximas consultas
 
-            else:
-                newType = getLetterByNumber(len(tempo_types))
-                tree.type = newType
-                tempo_types[tree.symb] = newType
-
+        labelTypes(tree.left, symbol_table, temporal_types)
+        labelTypes(tree.right, symbol_table, temporal_types)
 
 ######################################################################################
 ############################## DEFINICION DEL VISITADOR ##############################
@@ -204,6 +199,6 @@ else:                                           # en caso contrario se recorre e
     # en caso que haya sido una definicion de tipo (donde el visitador retorna Void()), no se imprime el arbol
     if isinstance(result_tree, Node):
         # en caso contrario, se etiquetan los nodos con sus tipos y se imprime con streamlit.graphviz_chart usando DOT
-        labelTypes(result_tree, st.session_state['symbol_table'], {})
+        labelTypes(result_tree, st.session_state['symbol_table'])
         graphviz_code = fromTreeToDotGraph(result_tree)
         st.graphviz_chart(graphviz_code)
