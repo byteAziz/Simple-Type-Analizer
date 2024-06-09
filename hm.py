@@ -31,7 +31,7 @@ class InconsistenciaDeTipos(Exception):
         super().__init__(self.message)
 
 
-class DemasiadasAplicaciones(Exception):
+class AplicacionImposible(Exception):
     def __init__(self):
         self.message = "Se ha superado el maximo de tipos admitidos sobre una aplicación."
         super().__init__(self.message)
@@ -128,7 +128,7 @@ def fromTreeToDotGraph(tree: Tree) -> str:
     return "\n".join(dotLines)
 
 
-# dado un arbol y la tabla de simbolos prefefinida, retorna el arbol etiquetado
+# dado un arbol y la tabla de simbolos prefefinida, retorna el arbol etiquetado y asigna nuevos tipos a los desconocidos
 def labelTypes(tree: Tree, symbol_table: dict, temporal_types: dict = {}) -> None:
     # retorna la letra del abecedario correspondiente al numero
     def getLetterByNumber(number):
@@ -143,7 +143,7 @@ def labelTypes(tree: Tree, symbol_table: dict, temporal_types: dict = {}) -> Non
             tree.type = temporal_types[tree.symb]
 
         else:                                       # se asigna un nuevo tipo
-            newType = getLetterByNumber(len(temporal_types))
+            newType = getLetterByNumber(len(temporal_types))        # se asigna una letra del abecedario
             tree.type = newType
             if tree.symb in {'λ', '@'}:                             # si es una aplicacion o abstraccion, se guarda con
                 temporal_types[f'{tree.symb}_{tree.id}'] = newType  # una llave unica para no repetir el tipo entre ellos
@@ -154,8 +154,8 @@ def labelTypes(tree: Tree, symbol_table: dict, temporal_types: dict = {}) -> Non
         labelTypes(tree.right, symbol_table, temporal_types)
 
 
-# dado un arbol, infiere los tipos que no sean definidos a partir de la aplicacion
-# y retorna un diccionario con los tipos inferidos
+# dado un arbol, infiere los tipos de las aplicaciones y abstracciones
+# en caso de error, lanza una excepcion correspondiente
 def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
     if isinstance(tree, Node):
         inferTypes(tree.left, tiposInferidos)
@@ -171,8 +171,8 @@ def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
                 if not tree.left.hasDefType:                    # si el tipo de la izquierda no esta definido
                     raise TipoNoDefinido(tree.left.symb)
 
-                if len(leftBasicType) == 1:                     # de la forma "(N)"
-                    raise DemasiadasAplicaciones()
+                if len(leftBasicType) == 1:                     # de la forma "(N)" por lo que no se puede aplicar
+                    raise AplicacionImposible()
 
                 if tree.right.hasDefType:                       # si el tipo de la derecha esta definido
                     if leftBasicType[0] != rightBasicType[0]:   # pero no coincide con el de la izquierda
@@ -194,11 +194,11 @@ def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
                 if not tree.right.hasDefType:               # si el tipo de la derecha no esta definido
                     raise TipoNoDefinido(tree.right.symb)
 
-                if not tree.left.hasDefType:
-                    if tree.left.type not in tiposInferidos:
-                        raise TipoNoDefinido(tree.left.symb)
-                    else:
-                        tree.left.type = tiposInferidos[tree.left.type]
+                if not tree.left.hasDefType:                            # si el tipo de la izquierda no esta definido
+                    if tree.left.type not in tiposInferidos:                # si no esta en la tabla de tipos inferidos
+                        raise TipoNoDefinido(tree.left.symb)                # se lanza una excepcion
+                    else:                                               # si esta en la tabla de tipos inferidos
+                        tree.left.type = tiposInferidos[tree.left.type]     # se asigna el tipo inferido
                         tree.left.hasDefType = True
                         leftBasicType = fromOutputToBasicFormat(tree.left.type)
 
@@ -217,9 +217,9 @@ def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
 class TreeVisitor(hmVisitor):
     def __init__(self, symbol_table):
         self.current_id = 0                 # identificador unico que se da a cada uno
-        self.symbol_table = symbol_table    # tabla de simbolos hasta ahora, usado cuando se define un tipo
+        self.symbol_table = symbol_table    # tabla de simbolos accareada en tota la sesion, usada cuando se define un tipo
 
-    # retorna un identificador nuevo unico
+    # retorna un identificador unico nuevo
     def next_id(self):
         self.current_id += 1
         return self.current_id
@@ -228,9 +228,9 @@ class TreeVisitor(hmVisitor):
     def visitRoot(self, ctx: hmParser.RootContext):
         return self.visit(ctx.expr())
 
-    # typeDefinition : assignable '::' typeExpr
+    # typeDefinition : asignable '::' typeExpr
     def visitTypeDefinition(self, ctx: hmParser.TypeDefinitionContext):
-        term = ctx.assignable().getText()
+        term = ctx.asignable().getText()
         inputType = ctx.typeExpr().getText()
         typeFormatted = fromInputToOutputFormat(inputType)
         self.symbol_table[term] = typeFormatted
@@ -285,14 +285,13 @@ class TreeVisitor(hmVisitor):
 st.write("""
          # El analizador de tipos HinNer
          #### Proyecto de lenguajes de programación - Q2 2023/24
-         ###### Hecho por: Tahir Muhammad Aziz
+         ###### Hecho por Tahir Muhammad Aziz
          ***
          """)
 
 stInput = st.text_input("Entrada",
-                        value="Entrada",
+                        value="Ejemplo",
                         placeholder="\\ x -> (+) 2 x",
-                        help="Introduce la expresión y presiona *Enter* en tu teclado para analizarla."
                         )
 
 
@@ -322,7 +321,8 @@ else:                                           # en caso contrario se recorre e
     st.table(symbol_table_df)
     st.divider()
 
-    # en caso que no haya sido una definicion de tipo (donde el visitador no retorna un Node sino Void)
+    # si se ha definido un tipo, no se muestra nada mas
+    # en caso contrario, se muestra el arbol y se hace la inferencia
     if isinstance(result_tree, Node):
         # se etiquetan los nodos con sus tipos y se imprime con streamlit.graphviz_chart usando DOT
         st.write("##### Árbol de tipos")
@@ -330,14 +330,14 @@ else:                                           # en caso contrario se recorre e
         graphviz_code = fromTreeToDotGraph(result_tree)
         st.graphviz_chart(graphviz_code)
 
-        # se crea un boton que al pulsar se hace la inferencia de tipos y se muestra en una tabla
+        # se crea un boton que al ser pulsado se hace la inferencia de tipos y se muestra en una tabla
         if st.button("Inferir tipos"):
             st.divider()
             st.write("##### Inferencia de tipos")
             try:
                 tiposInferidos = {}
                 inferTypes(result_tree, tiposInferidos)
-            except (InconsistenciaDeTipos, DemasiadasAplicaciones, TipoNoDefinido) as it:
+            except (InconsistenciaDeTipos, AplicacionImposible, TipoNoDefinido) as it:
                 st.error(f"ERROR: {it}", icon="🚨")
             else:
                 graphviz_code = fromTreeToDotGraph(result_tree)

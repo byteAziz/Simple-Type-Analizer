@@ -12,8 +12,8 @@ expr: typeDefinition
     | term
     ;
 
-typeDefinition : assignable '::' typeExpr;
-assignable: NUMBER | '(' OPERATOR ')';
+typeDefinition : asignable '::' typeExpr;
+asignable: NUMBER | '(' OPERATOR ')';
 typeExpr: VARIABLE ('->' typeExpr)*;
 
 abstraction : '\\' VARIABLE '->' expr;
