@@ -86,7 +86,7 @@ def fromBasicToOutputFormat(type_expr: str) -> str:
 
 @dataclass
 class Node:
-    iden: int         # identificador unico del nodo
+    iden: int       # identificador unico del nodo
     symb: str       # simbolo que representa el nodo
     left: Tree
     right: Tree
@@ -98,7 +98,7 @@ class Void:
     pass
 
 
-Tree = Node | Void
+Tree = Node | Void              # Equivalente a "Tree = Union[Node, Void]" en versiones antiguas de python
 
 
 # ------------------------------- FUNCIONES DEL ARBOL ------------------------------ #
