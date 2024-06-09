@@ -86,11 +86,11 @@ def fromBasicToOutputFormat(type_expr: str) -> str:
 
 @dataclass
 class Node:
-    id: int         # identificador unico del nodo
+    iden: int         # identificador unico del nodo
     symb: str       # simbolo que representa el nodo
     left: Tree
     right: Tree
-    type: str = ""              # tipo que representan
+    tipo: str = ""              # tipo que representan
     hasDefType: bool = False    # indica si el tipo es definitivo, es decir, declarado por el usuario o inferido
 
 
@@ -108,17 +108,17 @@ def fromTreeToDotGraph(tree: Tree) -> str:
     # recorre el arbol de la forma adecuada para crear el grafo
     def traverse(node: Tree, dotLines: list):
         if isinstance(node, Node):
-            node_label = f'{node.symb}\n{node.type}'
+            node_label = f'{node.symb}\n{node.tipo}'
 
             # mediante el identificador unico, definimos el texto de los vertices
-            dotLines.append(f'    {node.id} [label="{node_label}"];')
+            dotLines.append(f'    {node.iden} [label="{node_label}"];')
 
             # se crean las aristas en orden
             if isinstance(node.left, Node):
-                dotLines.append(f'    {node.id} -- {node.left.id};')
+                dotLines.append(f'    {node.iden} -- {node.left.iden};')
                 traverse(node.left, dotLines)
             if isinstance(node.right, Node):
-                dotLines.append(f'    {node.id} -- {node.right.id};')
+                dotLines.append(f'    {node.iden} -- {node.right.iden};')
                 traverse(node.right, dotLines)
 
     # se escribe la sintaxis en DOT para crear el grafo mediante el recorrido
@@ -136,17 +136,17 @@ def labelTypes(tree: Tree, symbol_table: dict, temporal_types: dict = {}) -> Non
 
     if isinstance(tree, Node):
         if tree.symb in symbol_table:               # si esta en la tabla de tipos dada por el usuario
-            tree.type = symbol_table[tree.symb]
+            tree.tipo = symbol_table[tree.symb]
             tree.hasDefType = True
 
         elif tree.symb in temporal_types:           # si esta en la tabla de tipos unica del recorrido
-            tree.type = temporal_types[tree.symb]
+            tree.tipo = temporal_types[tree.symb]
 
         else:                                       # se asigna un nuevo tipo
             newType = getLetterByNumber(len(temporal_types))        # se asigna una letra del abecedario
-            tree.type = newType
+            tree.tipo = newType
             if tree.symb in {'λ', '@'}:                             # si es una aplicacion o abstraccion, se guarda con
-                temporal_types[f'{tree.symb}_{tree.id}'] = newType  # una llave unica para no repetir el tipo entre ellos
+                temporal_types[f'{tree.symb}_{tree.iden}'] = newType  # una llave unica para no repetir el tipo entre ellos
             else:                                       # si no lo es, se guarda el propio simbolo
                 temporal_types[tree.symb] = newType     # para identificarlo en las proximas consultas
 
@@ -162,8 +162,8 @@ def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
         inferTypes(tree.right, tiposInferidos)
 
         if not tree.hasDefType and isinstance(tree.left, Node) and isinstance(tree.right, Node):
-            leftBasicType = fromOutputToBasicFormat(tree.left.type)
-            rightBasicType = fromOutputToBasicFormat(tree.right.type)
+            leftBasicType = fromOutputToBasicFormat(tree.left.tipo)
+            rightBasicType = fromOutputToBasicFormat(tree.right.tipo)
 
             # ------ Inferencia de aplicaciones ------ #
 
@@ -179,13 +179,13 @@ def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
                         raise InconsistenciaDeTipos("aplicación", leftBasicType[0], rightBasicType[0])
 
                 else:                                   # si no esta definido, se asigna el primer tipo de la izquierda
-                    tiposInferidos[tree.right.type] = f"{fromBasicToOutputFormat(leftBasicType[0])}"
-                    tree.right.type = f"{fromBasicToOutputFormat(leftBasicType[0])}"
+                    tiposInferidos[tree.right.tipo] = f"{fromBasicToOutputFormat(leftBasicType[0])}"
+                    tree.right.tipo = f"{fromBasicToOutputFormat(leftBasicType[0])}"
                     tree.right.hasDefType = True
 
                 # a la aplicacion se le asigna el tipo de la derecha a partir del segundo tipo del de la izquierda
-                tiposInferidos[tree.type] = f"{fromBasicToOutputFormat(leftBasicType[1:])}"
-                tree.type = f"{fromBasicToOutputFormat(leftBasicType[1:])}"
+                tiposInferidos[tree.tipo] = f"{fromBasicToOutputFormat(leftBasicType[1:])}"
+                tree.tipo = f"{fromBasicToOutputFormat(leftBasicType[1:])}"
                 tree.hasDefType = True
 
             # ------ Inferencia de abstracciones ------ #
@@ -195,17 +195,17 @@ def inferTypes(tree: Tree, tiposInferidos: dict) -> None:
                     raise TipoNoDefinido(tree.right.symb)
 
                 if not tree.left.hasDefType:                            # si el tipo de la izquierda no esta definido
-                    if tree.left.type not in tiposInferidos:                # si no esta en la tabla de tipos inferidos
+                    if tree.left.tipo not in tiposInferidos:                # si no esta en la tabla de tipos inferidos
                         raise TipoNoDefinido(tree.left.symb)                # se lanza una excepcion
                     else:                                               # si esta en la tabla de tipos inferidos
-                        tree.left.type = tiposInferidos[tree.left.type]     # se asigna el tipo inferido
+                        tree.left.tipo = tiposInferidos[tree.left.tipo]     # se asigna el tipo inferido
                         tree.left.hasDefType = True
-                        leftBasicType = fromOutputToBasicFormat(tree.left.type)
+                        leftBasicType = fromOutputToBasicFormat(tree.left.tipo)
 
                 # a la abstraccion se le asigna el tipo del de la izquierda con una flecha al tipo del de la derecha
                 treeBasicType = leftBasicType + rightBasicType
-                tiposInferidos[tree.type] = f"{fromBasicToOutputFormat(treeBasicType)}"
-                tree.type = f"{fromBasicToOutputFormat(treeBasicType)}"
+                tiposInferidos[tree.tipo] = f"{fromBasicToOutputFormat(treeBasicType)}"
+                tree.tipo = f"{fromBasicToOutputFormat(treeBasicType)}"
                 tree.hasDefType = True
 
 
