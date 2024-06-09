@@ -46,4 +46,3 @@ Este proyecto es un analizador de tipos basado en la gramática de Hindley-Milne
 - `TipoNoDefinido`: Se lanza cuando el tipo de un símbolo no ha sido definido.
 - `InconsistenciaDeTipos`: Se lanza cuando hay un error de inconsistencia de tipos en una aplicación o abstracción.
 - `DemasiadasAplicaciones`: Se lanza cuando se supera el máximo de tipos admitidos en una aplicación.
-
