@@ -228,10 +228,10 @@ class TreeVisitor(hmVisitor):
     def visitRoot(self, ctx: hmParser.RootContext):
         return self.visit(ctx.expr())
 
-    # typeDefinition : assignable '::' type
+    # typeDefinition : assignable '::' typeExpr
     def visitTypeDefinition(self, ctx: hmParser.TypeDefinitionContext):
         term = ctx.assignable().getText()
-        inputType = ctx.type_().getText()
+        inputType = ctx.typeExpr().getText()
         typeFormatted = fromInputToOutputFormat(inputType)
         self.symbol_table[term] = typeFormatted
         return Void()

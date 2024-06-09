@@ -12,9 +12,9 @@ expr: typeDefinition
     | term
     ;
 
-typeDefinition : assignable '::' type;
+typeDefinition : assignable '::' typeExpr;
 assignable: NUMBER | '(' OPERATOR ')';
-type: VARIABLE ('->' type)*;
+typeExpr: VARIABLE ('->' typeExpr)*;
 
 abstraction : '\\' VARIABLE '->' expr;
 

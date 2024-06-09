@@ -16,13 +16,6 @@ Este proyecto es un analizador de tipos basado en la gramática de Hindley-Milne
 - Antlr4
 - Streamlit
 
-## Instalación
-1. Instala las dependencias:
-    ```bash
-    pip install antlr4-python3-runtime
-    pip install streamlit
-    ```
-
 ## Compilación y ejecución
 1. Dirigete a la carpeta de los archivos y genera los necesarios:
     ```bash
